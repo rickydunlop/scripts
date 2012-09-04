@@ -30,18 +30,18 @@ import os
 import sys
 import shutil
 import subprocess
-from optparse import OptionParser
+import argparse
 
-parser = OptionParser()
+parser = argparse.ArgumentParser(description='Removes `from old Mac` files from your system')
 
-parser.add_option('-v','--verbose',dest = 'verbose', action='store_true',
-        help='Print extra information')
-options, args = parser.parse_args()
+parser.add_argument('-v', '--verbose', dest = 'verbose', action='store_true',
+        help='Show extra information')
+options = parser.parse_args()
 
 entries = []
 process_info = os.popen("locate 'from old Mac'")
 tmpentries = process_info.read().split("\n")
-   
+
 print "Calculating size..."
 
 totsize = 0
@@ -73,8 +73,14 @@ print "Number of links: ", totlinks
 print "Number of unknown files: ", totunknown
 print "Total space saved: ", (totsize/1024)/1024, "MB"
 
+if totsize == 0:
+    print "If no files were found but you are sure they definitely exist:\n\
+Run the following command to ensure locate is loaded \n\
+    sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.locate.plist \n\
+You can also update the database by running \n\
+    sudo /usr/libexec/locate.updatedb"
 
-cont = raw_input("Continue [y/N]")
+cont = raw_input("Continue [y/N]: ")
 
 if cont.lower() != "y":
     sys.exit()
@@ -84,16 +90,13 @@ while entries:
     if not "(from old Mac)" in entry:
         continue
     if os.path.isfile( entry ) or os.path.islink( entry ):
-        if options.debug:
+        if options.verbose:
             print "delete file", entry
         func = os.remove
     elif os.path.isdir( entry ):
-        if options.debug:
+        if options.verbose:
             print "rm dir", entry
         func = shutil.rmtree
-        #As rmtree will delete everything from this directory, we will
-        #skip the files that contains this directory on its name.
-        entries = [k for k in entries if not k.startwith(entry)]
     else:
         print "Unknown type for '%s' didn't touch it."%entry
         continue
@@ -102,4 +105,3 @@ while entries:
     except Exception, e:
         sys.stderr.write(e)
         sys.stderr.flush()
-
